@@ -31,7 +31,7 @@ def play_sound(name):
 
 def directional_move(pos, amount, rotation):
     return round(pos[0] + math.sin(math.radians(rotation)) * amount, 6), \
-        round(pos[1] + math.cos(math.radians(rotation)) * amount, 6)
+           round(pos[1] + math.cos(math.radians(rotation)) * amount, 6)
 
 
 def fps_sync_int(numb, reversed=False):
@@ -48,13 +48,14 @@ def collision_check(self_group_check, other_group_check):
                 for j in other.hitboxes:
                     if j.group == other_group_check:
                         x, y = (
-                            other.x - j.hitbox.get_width() / 2 + j.hitbox_offset[0]) - (
-                            self.x - i.hitbox.get_width() / 2 + i.hitbox_offset[0]),\
+                                       other.x - j.hitbox.get_width() / 2 + j.hitbox_offset[0]) - (
+                                       self.x - i.hitbox.get_width() / 2 + i.hitbox_offset[0]), \
                                (other.y - j.hitbox.get_height() / 2 + j.hitbox_offset[1]) - (
-                            self.y - i.hitbox.get_height() / 2 + i.hitbox_offset[1])
+                                       self.y - i.hitbox.get_height() / 2 + i.hitbox_offset[1])
                         if i.mask.overlap(j.mask, (x, y)):
                             return True
         return False
+
     return real_func
 
 
@@ -79,6 +80,7 @@ def melee_held_gen(x_offset=0, y_offset=0, rot_offset=0, flippable_x=False, flip
         self.x, self.y = directional_move(
             (self.x, self.y), y_offset * (1 + self.flipx * 0), self.rotation + 90)
         self.rotation += rot_offset
+
     return real_func
 
 
@@ -97,7 +99,7 @@ def melee_attack_gen(
             self.states['attack']['start_rotation'] = self.rotation
             self.states['attack']['step'] = 'started'
         elif self.states['attack']['step'] == 'started':
-            self.rotation += (self.states['attack']['start_rotation'] - a - self.rotation)\
+            self.rotation += (self.states['attack']['start_rotation'] - a - self.rotation) \
                              * fps_sync_int(prepare_speed, reversed=True)
             if abs(self.states['attack']['start_rotation'] - a - self.rotation) < 0.05:
                 self.rotation = self.states['attack']['start_rotation'] - a
@@ -106,14 +108,14 @@ def melee_attack_gen(
                 self.states['attack']['step'] = 'hitting'
         elif self.states['attack']['step'] == 'hitting':
             self.rotation += self.states['attack']['tick_rotation']
-            for i in entities:
+            for i in sprites_groups['entities']:
                 damage_collision = collision_check('damage', 'damage')
                 if damage_collision(player.holding_weapon, i) and i != player:
                     self.on_hit(i)
             if round(self.states['attack']['start_rotation'] + a - self.rotation, 5) == 0:
                 self.states['attack']['step'] = 'ending'
         elif self.states['attack']['step'] == 'ending':
-            self.rotation += (self.states['attack']['start_rotation'] - self.rotation)\
+            self.rotation += (self.states['attack']['start_rotation'] - self.rotation) \
                              * fps_sync_int(end_speed, reversed=True)
             if abs(self.states['attack']['start_rotation'] - self.rotation) < 0.05:
                 self.rotation = self.states['attack']['start_rotation']
@@ -274,7 +276,7 @@ class Object(pygame.sprite.Sprite):
                                     self.y_scale * orig_size[1] * CAMERA.scale)),
             self.flipx, self.flipy), self.rotation + CAMERA.rotation)
         self.rect = pygame.rect.Rect(
-            screen.get_width() /
+            SCREEN.get_width() /
             2 +
             round(
                 ((self.x *
@@ -282,26 +284,26 @@ class Object(pygame.sprite.Sprite):
                       math.radians(
                           CAMERA.rotation +
                           90)) +
-                    self.y *
-                    math.sin(
+                  self.y *
+                  math.sin(
                       math.radians(
                           CAMERA.rotation))) *
-                    CAMERA.scale -
-                    self.image.get_width() /
-                    2 +
-                    (
-                    CAMERA.x *
-                    math.sin(
-                        math.radians(
-                            CAMERA.rotation +
-                            90)) +
-                    CAMERA.y *
-                    math.sin(
-                        math.radians(
-                            CAMERA.rotation))) *
-                    CAMERA.scale),
+                 CAMERA.scale -
+                 self.image.get_width() /
+                 2 +
+                 (
+                         CAMERA.x *
+                         math.sin(
+                             math.radians(
+                                 CAMERA.rotation +
+                                 90)) +
+                         CAMERA.y *
+                         math.sin(
+                             math.radians(
+                                 CAMERA.rotation))) *
+                 CAMERA.scale),
                 5),
-            screen.get_height() /
+            SCREEN.get_height() /
             2 +
             round(
                 ((self.x *
@@ -317,15 +319,15 @@ class Object(pygame.sprite.Sprite):
                  self.image.get_height() /
                  2 +
                  (
-                    CAMERA.x *
-                    math.cos(
-                        math.radians(
-                            CAMERA.rotation +
-                            90)) +
-                    CAMERA.y *
-                    math.cos(
-                        math.radians(
-                            CAMERA.rotation))) *
+                         CAMERA.x *
+                         math.cos(
+                             math.radians(
+                                 CAMERA.rotation +
+                                 90)) +
+                         CAMERA.y *
+                         math.cos(
+                             math.radians(
+                                 CAMERA.rotation))) *
                  CAMERA.scale),
                 5),
             *
@@ -350,7 +352,7 @@ class Object(pygame.sprite.Sprite):
         self.timer += 1
 
     def render_costume(self):
-        if self.rect.colliderect(pygame.rect.Rect(-50, -50, screen.get_width() + 50, screen.get_height() + 50)):
+        if self.rect.colliderect(pygame.rect.Rect(-50, -50, SCREEN.get_width() + 50, SCREEN.get_height() + 50)):
             orig_size = self.costume[0][self.cur_frame].get_size()
             self.image = pygame.transform.rotate(pygame.transform.flip(
                 pygame.transform.scale(self.costume[0][self.cur_frame],
@@ -358,7 +360,7 @@ class Object(pygame.sprite.Sprite):
                                         self.y_scale * orig_size[1] * CAMERA.scale)),
                 self.flipx, self.flipy), self.rotation + CAMERA.rotation)
         self.rect = pygame.rect.Rect(
-            screen.get_width() /
+            SCREEN.get_width() /
             2 +
             round(
                 ((self.x *
@@ -366,26 +368,26 @@ class Object(pygame.sprite.Sprite):
                       math.radians(
                           CAMERA.rotation +
                           90)) +
-                    self.y *
-                    math.sin(
+                  self.y *
+                  math.sin(
                       math.radians(
                           CAMERA.rotation))) *
-                    CAMERA.scale -
-                    self.image.get_width() /
-                    2 +
-                    (
-                    CAMERA.x *
-                    math.sin(
-                        math.radians(
-                            CAMERA.rotation +
-                            90)) +
-                    CAMERA.y *
-                    math.sin(
-                        math.radians(
-                            CAMERA.rotation))) *
-                    CAMERA.scale),
+                 CAMERA.scale -
+                 self.image.get_width() /
+                 2 +
+                 (
+                         CAMERA.x *
+                         math.sin(
+                             math.radians(
+                                 CAMERA.rotation +
+                                 90)) +
+                         CAMERA.y *
+                         math.sin(
+                             math.radians(
+                                 CAMERA.rotation))) *
+                 CAMERA.scale),
                 8),
-            screen.get_height() /
+            SCREEN.get_height() /
             2 +
             round(
                 ((self.x *
@@ -401,15 +403,15 @@ class Object(pygame.sprite.Sprite):
                  self.image.get_height() /
                  2 +
                  (
-                    CAMERA.x *
-                    math.cos(
-                        math.radians(
-                            CAMERA.rotation +
-                            90)) +
-                    CAMERA.y *
-                    math.cos(
-                        math.radians(
-                            CAMERA.rotation))) *
+                         CAMERA.x *
+                         math.cos(
+                             math.radians(
+                                 CAMERA.rotation +
+                                 90)) +
+                         CAMERA.y *
+                         math.cos(
+                             math.radians(
+                                 CAMERA.rotation))) *
                  CAMERA.scale),
                 8),
             *
@@ -449,8 +451,8 @@ class PrimeObject(Object):
             pygame.transform.scale(self.costume[0][self.cur_frame],
                                    (self.x_scale * orig_size[0], self.y_scale * orig_size[1])),
             self.flipx, self.flipy), self.rotation)
-        self.rect = pygame.rect.Rect(screen.get_width() / 2 + self.x - self.image.get_width() / 2,
-                                     screen.get_height() / 2 + self.y - self.image.get_height() / 2,
+        self.rect = pygame.rect.Rect(SCREEN.get_width() / 2 + self.x - self.image.get_width() / 2,
+                                     SCREEN.get_height() / 2 + self.y - self.image.get_height() / 2,
                                      *self.image.get_size())
         self.image = pygame.transform.flip(self.image, self.flipx, self.flipy)
 
@@ -461,12 +463,12 @@ class PrimeObject(Object):
                                    (self.x_scale * orig_size[0], self.y_scale * orig_size[1])),
             self.flipx, self.flipy), self.rotation)
         self.rect = pygame.rect.Rect(
-            screen.get_width() /
+            SCREEN.get_width() /
             2 +
             self.x -
             self.image.get_width() /
             2,
-            screen.get_height() /
+            SCREEN.get_height() /
             2 +
             self.y -
             self.image.get_height() /
@@ -513,6 +515,136 @@ class Entity(Object):
         self.kill()
 
 
+class entity_Player(Entity):
+    def __init__(
+            self,
+            sprite,
+            layer,
+            columns=1,
+            rows=1,
+            animation_speed=1.0,
+            groups=()):
+        super().__init__(sprite, layer, columns, rows, animation_speed, groups)
+        self.base_hp = 100
+        self.base_defense = 0
+        self.register_costume('left', load_image('player_left.png', 2),
+                              columns=1,
+                              rows=1,
+                              animation_speed=0)
+        self.register_costume('walking_left', load_image('player_walk_left.png', 2),
+                              columns=4,
+                              rows=1,
+                              animation_speed=8)
+        self.register_costume('right', load_image('player_right.png', 2),
+                              columns=1,
+                              rows=1,
+                              animation_speed=0)
+        self.register_costume('walking_right', load_image('player_walk_right.png', 2),
+                              columns=4,
+                              rows=1,
+                              animation_speed=8)
+        self.register_costume('up', load_image('player_up.png', 2),
+                              columns=1,
+                              rows=1,
+                              animation_speed=0)
+        self.register_costume('walking_up', load_image('player_walk_up.png', 2),
+                              columns=4,
+                              rows=1,
+                              animation_speed=8)
+        self.register_costume('down', load_image('player_down.png', 2),
+                              columns=1,
+                              rows=1,
+                              animation_speed=0)
+        self.register_costume('walking_down', load_image('player_walk_down.png', 2),
+                              columns=4,
+                              rows=1,
+                              animation_speed=8)
+        self.set_costume('left')
+
+    def on_tick(self):
+        key = pygame.key.get_pressed()
+        if key[pygame.K_DOWN] and self.able_move:
+            if 'walking' not in self.cur_costume_id or self.facing not in self.cur_costume_id:
+                frame = self.cur_frame
+                timer = self.costume_timer
+                self.set_costume(f'walking_{player.facing}')
+                self.set_anim_frame(frame)
+                self.costume_timer = timer
+            self.y += player.speed * 30 / FPS
+            self.update()
+            while pygame.sprite.spritecollide(self,
+                                              sprites_groups['walls'], False, collision_check('movement', 'movement')):
+                self.y -= 1
+                self.update()
+        elif key[pygame.K_UP] and self.able_move:
+            if 'walking' not in self.cur_costume_id or self.facing not in self.cur_costume_id:
+                frame = self.cur_frame
+                timer = self.costume_timer
+                self.set_costume(f'walking_{player.facing}')
+                self.set_anim_frame(frame)
+                self.costume_timer = timer
+            self.y -= player.speed * 30 / FPS
+            self.update()
+            while pygame.sprite.spritecollide(self,
+                                              sprites_groups['walls'], False, collision_check('movement', 'movement')):
+                self.y += 1
+                self.update()
+        if key[pygame.K_RIGHT] and self.able_move:
+            if 'walking' not in self.cur_costume_id or player.facing not in player.cur_costume_id:
+                frame = self.cur_frame
+                timer = self.costume_timer
+                self.set_costume(f'walking_{player.facing}')
+                self.set_anim_frame(frame)
+                self.costume_timer = timer
+            self.x += player.speed * 30 / FPS
+            self.update()
+            while pygame.sprite.spritecollide(self,
+                                              sprites_groups['walls'], False, collision_check('movement', 'movement')):
+                self.x -= 1
+                self.update()
+        elif key[pygame.K_LEFT] and self.able_move:
+            if 'walking' not in self.cur_costume_id or self.facing not in self.cur_costume_id:
+                frame = self.cur_frame
+                timer = self.costume_timer
+                self.set_costume(f'walking_{player.facing}')
+                self.set_anim_frame(frame)
+                self.costume_timer = timer
+            self.x -= player.speed * 30 / FPS
+            self.update()
+            while pygame.sprite.spritecollide(self,
+                                              sprites_groups['walls'], False, collision_check('movement', 'movement')):
+                self.x += 1
+                self.update()
+        if not (key[pygame.K_DOWN] or key[pygame.K_UP]
+                or key[pygame.K_LEFT] or key[pygame.K_RIGHT]):
+            if 'walking' in self.cur_costume_id:
+                self.set_costume(f'{self.facing}')
+        if pygame.mouse.get_focused():
+            cursor.shown = True
+            dx, dy = self.x + CAMERA.x - cursor.x, self.y + CAMERA.y - cursor.y
+            if dx != 0:
+                rot = math.degrees(math.atan2(dy, dx))
+            else:
+                if dy > 0:
+                    rot = 90
+                else:
+                    rot = 270
+            rot += 270
+            rot %= 360
+            if 45 > rot >= 0 or 360 > rot >= 315:
+                self.facing = 'up'
+            elif 135 > rot >= 45:
+                self.facing = 'right'
+            elif 225 > rot >= 135:
+                self.facing = 'down'
+            else:
+                self.facing = 'left'
+            if 'walking' not in player.cur_costume_id:
+                self.set_costume(f'{player.facing}')
+        else:
+            cursor.shown = False
+
+
 class weapon_BirchTree(Object):
     def __init__(
             self,
@@ -526,7 +658,7 @@ class weapon_BirchTree(Object):
         self.object_id = 'BirchTree'
         self.held = melee_held_gen(x_offset=0, y_offset=-124, rot_offset=90, flippable_x=True)
         self.attack = melee_attack_gen(x_offset=0, y_offset=-124, rot_offset=90,
-                                       prepare_speed=0.08, attack_rot=45, attack_ticks=4,
+                                       prepare_speed=0.08, attack_rot=45, attack_ticks=3,
                                        end_speed=0.2)
         self.register_hitbox(Hitbox(self, 'damage', 'image'))
 
@@ -560,109 +692,93 @@ class weapon_BirchTree(Object):
         self.render_costume()
 
 
-def intro():
-    pass
+class Room:
+    def on_set(self):
+        pass
+
+    def room_function(self):
+        pass
+
+    def set(self):
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global sprites_groups, all_sprites, shown_sprites
+        CLOCK = pygame.time.Clock()
+        FPS = 60
+        all_sprites = pygame.sprite.Group()
+        shown_sprites = pygame.sprite.LayeredUpdates()
+        sprites_groups = dict()
+
+        CAMERA = Camera()
+        if self.on_set is not None:
+            self.on_set()
 
 
-if __name__ == '__main__':
-    pygame.init()
-    screen = pygame.display.set_mode((800, 600))
-    FPS = 60
+class room_Testing(Room):
+    def on_set(self):
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global sprites_groups, all_sprites, shown_sprites
+        global cursor, ground, wall, entity, player
 
-    CAMERA = Camera()
-    CAMERA.set_mode('smooth_follow')
-    CAMERA.speed = 0.2
-    CAMERA.scale = 1
+        CAMERA.set_mode('smooth_follow')
+        CAMERA.speed = 0.2
+        CAMERA.scale = 1
 
-    all_sprites = pygame.sprite.Group()
-    shown_sprites = pygame.sprite.LayeredUpdates()
-    walls = pygame.sprite.Group()
-    entities = pygame.sprite.Group()
+        sprites_groups['walls'] = pygame.sprite.Group()
+        sprites_groups['entities'] = pygame.sprite.Group()
 
-    clock = pygame.time.Clock()
-    running = True
-    pygame.mouse.set_visible(False)
+        cursor = PrimeObject(load_image('crs_default.png', 2), 10000,
+                             columns=1,
+                             rows=1,
+                             animation_speed=0)
 
-    cursor = PrimeObject(load_image('crs_default.png', 2), 10000,
+        ground = [[Block(load_image('ground.png', 2), 1,
+                         columns=2,
+                         rows=1,
+                         animation_speed=0,
+                         x=j - 12,
+                         y=i - 4) for j in range(25)] for i in range(9)]
+        wall = [[Block(load_image('wall.png', 2), 48,
+                       columns=2,
+                       rows=1,
+                       animation_speed=0,
+                       x=j - 12,
+                       y=i - 4,
+                       groups=(sprites_groups['walls'],))
+                 for j in range(25) if i == 0 or j == 0 or i == 8 or j == 24] for i in range(9)]
+        player = entity_Player(load_image('default_object.png', 2), 48,
+                               columns=1,
+                               rows=1,
+                               animation_speed=0)
+
+        for i in sprites_groups['walls']:
+            i.register_hitbox(Hitbox(i, 'movement', 'rect', size=(32, 32)))
+        player.register_hitbox(Hitbox(player, 'movement', 'rect', size=(28, 28), y_offset=4))
+
+        player.holding_weapon = weapon_BirchTree(load_image('wpn_tree.png', 2), 256,
+                                                 columns=1,
+                                                 rows=1,
+                                                 animation_speed=0)
+
+        entity = [Entity(load_image('entity_test.png', 2), 48,
                          columns=1,
                          rows=1,
-                         animation_speed=0)
+                         animation_speed=0,
+                         groups=(sprites_groups['entities'],))]
+        entity[0].register_hitbox(Hitbox(entity[0], 'damage', 'image'))
 
-    ground = [[Block(load_image('ground.png', 2), 1,
-                     columns=2,
-                     rows=1,
-                     animation_speed=0,
-                     x=j - 12,
-                     y=i - 4) for j in range(25)] for i in range(9)]
-    wall = [[Block(load_image('wall.png', 2), 48,
-                   columns=2,
-                   rows=1,
-                   animation_speed=0,
-                   x=j - 12,
-                   y=i - 4,
-                   groups=(walls,)) for j in range(25) if i == 0 or j == 0 or i == 8 or j == 24] for i in range(9)]
-    player = Entity(load_image('default_object.png', 2), 48,
-                    columns=1,
-                    rows=1,
-                    animation_speed=0)
-    player.register_costume('left', load_image('player_left.png', 2),
-                            columns=1,
-                            rows=1,
-                            animation_speed=0)
-    player.register_costume('walking_left', load_image('player_walk_left.png', 2),
-                            columns=4,
-                            rows=1,
-                            animation_speed=8)
-    player.register_costume('right', load_image('player_right.png', 2),
-                            columns=1,
-                            rows=1,
-                            animation_speed=0)
-    player.register_costume('walking_right', load_image('player_walk_right.png', 2),
-                            columns=4,
-                            rows=1,
-                            animation_speed=8)
-    player.register_costume('up', load_image('player_up.png', 2),
-                            columns=1,
-                            rows=1,
-                            animation_speed=0)
-    player.register_costume('walking_up', load_image('player_walk_up.png', 2),
-                            columns=4,
-                            rows=1,
-                            animation_speed=8)
-    player.register_costume('down', load_image('player_down.png', 2),
-                            columns=1,
-                            rows=1,
-                            animation_speed=0)
-    player.register_costume('walking_down', load_image('player_walk_down.png', 2),
-                            columns=4,
-                            rows=1,
-                            animation_speed=8)
-    player.set_costume('left')
+        all_sprites.update()
 
-    for i in walls:
-        i.register_hitbox(Hitbox(i, 'movement', 'rect', size=(32, 32)))
-    player.register_hitbox(Hitbox(player, 'movement', 'rect', size=(28, 28), y_offset=4))
+    def room_function(self):
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global sprites_groups, all_sprites, shown_sprites
+        global cursor, ground, wall, entity, player
 
-    player.holding_weapon = weapon_BirchTree(load_image('wpn_tree.png', 2), 256,
-                                             columns=1,
-                                             rows=1,
-                                             animation_speed=0)
-
-    entity = [Entity(load_image('entity_test.png', 2), 48,
-                     columns=1,
-                     rows=1,
-                     animation_speed=0,
-                     groups=(entities,))]
-    entity[0].register_hitbox(Hitbox(entity[0], 'damage', 'image'))
-
-    all_sprites.update()
-    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                RUNNING = False
             if event.type == pygame.MOUSEMOTION:
-                cursor.x = event.pos[0] - screen.get_width() / 2
-                cursor.y = event.pos[1] - screen.get_height() / 2
+                cursor.x = event.pos[0] - SCREEN.get_width() / 2
+                cursor.y = event.pos[1] - SCREEN.get_height() / 2
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     player.holding_weapon.left_click_interact()
@@ -671,90 +787,18 @@ if __name__ == '__main__':
                                             columns=1,
                                             rows=1,
                                             animation_speed=0,
-                                            groups=(entities,)))
+                                            groups=(sprites_groups['entities'],)))
                     entity[0].register_hitbox(Hitbox(entity[0], 'damage', 'image'))
                     entity[0].x = 360 * (random.random() - 0.5)
+                elif event.button == 3:
+                    all_sprites = pygame.sprite.Group()
+                    shown_sprites = pygame.sprite.LayeredUpdates()
 
-        screen.fill((0, 0, 0))
+        for i in all_sprites:
+            if hasattr(i, 'on_tick'):
+                i.on_tick()
 
-        if pygame.mouse.get_focused():
-            cursor.shown = True
-            dx, dy = player.x + CAMERA.x - cursor.x, player.y + CAMERA.y - cursor.y
-            if dx != 0:
-                rot = math.degrees(math.atan2(dy, dx))
-            else:
-                if dy > 0:
-                    rot = 90
-                else:
-                    rot = 270
-            rot += 270
-            rot %= 360
-            if 45 > rot >= 0 or 360 > rot >= 315:
-                player.facing = 'up'
-            elif 135 > rot >= 45:
-                player.facing = 'right'
-            elif 225 > rot >= 135:
-                player.facing = 'down'
-            else:
-                player.facing = 'left'
-            if 'walking' not in player.cur_costume_id:
-                player.set_costume(f'{player.facing}')
-        else:
-            cursor.shown = False
-
-        key = pygame.key.get_pressed()
-        if key[pygame.K_DOWN] and player.able_move:
-            if 'walking' not in player.cur_costume_id or player.facing not in player.cur_costume_id:
-                frame = player.cur_frame
-                timer = player.costume_timer
-                player.set_costume(f'walking_{player.facing}')
-                player.set_anim_frame(frame)
-                player.costume_timer = timer
-            player.y += player.speed * 30 / FPS
-            player.update()
-            while pygame.sprite.spritecollide(player, walls, False, collision_check('movement', 'movement')):
-                player.y -= 1
-                player.update()
-        elif key[pygame.K_UP] and player.able_move:
-            if 'walking' not in player.cur_costume_id or player.facing not in player.cur_costume_id:
-                frame = player.cur_frame
-                timer = player.costume_timer
-                player.set_costume(f'walking_{player.facing}')
-                player.set_anim_frame(frame)
-                player.costume_timer = timer
-            player.y -= player.speed * 30 / FPS
-            player.update()
-            while pygame.sprite.spritecollide(player, walls, False, collision_check('movement', 'movement')):
-                player.y += 1
-                player.update()
-        if key[pygame.K_RIGHT] and player.able_move:
-            if 'walking' not in player.cur_costume_id or player.facing not in player.cur_costume_id:
-                frame = player.cur_frame
-                timer = player.costume_timer
-                player.set_costume(f'walking_{player.facing}')
-                player.set_anim_frame(frame)
-                player.costume_timer = timer
-            player.x += player.speed * 30 / FPS
-            player.update()
-            while pygame.sprite.spritecollide(player, walls, False, collision_check('movement', 'movement')):
-                player.x -= 1
-                player.update()
-        elif key[pygame.K_LEFT] and player.able_move:
-            if 'walking' not in player.cur_costume_id or player.facing not in player.cur_costume_id:
-                frame = player.cur_frame
-                timer = player.costume_timer
-                player.set_costume(f'walking_{player.facing}')
-                player.set_anim_frame(frame)
-                player.costume_timer = timer
-            player.x -= player.speed * 30 / FPS
-            player.update()
-            while pygame.sprite.spritecollide(player, walls, False, collision_check('movement', 'movement')):
-                player.x += 1
-                player.update()
-        if not (key[pygame.K_DOWN] or key[pygame.K_UP]
-                or key[pygame.K_LEFT] or key[pygame.K_RIGHT]):
-            if 'walking' in player.cur_costume_id:
-                player.set_costume(f'{player.facing}')
+        SCREEN.fill((0, 0, 0))
 
         CAMERA.move((-player.x, -player.y))
 
@@ -764,8 +808,24 @@ if __name__ == '__main__':
             i.costume_anim()
             i.tick_timer()
 
-        shown_sprites.draw(screen)
-        
+        shown_sprites.draw(SCREEN)
+
         pygame.display.flip()
-        clock.tick(FPS)
+        CLOCK.tick(FPS)
+
+
+if __name__ == '__main__':
+    pygame.init()
+    pygame.mouse.set_visible(False)
+    SCREEN = pygame.display.set_mode((800, 600))
+    RUNNING = True
+    CAMERA = Camera()
+    CLOCK = pygame.time.Clock()
+    FPS = 60
+    CURRENT_ROOM = room_Testing()
+
+    CURRENT_ROOM.set()
+
+    while RUNNING:
+        CURRENT_ROOM.room_function()
     pygame.quit()
