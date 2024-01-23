@@ -1142,6 +1142,7 @@ class room_Intro(Room):
 
 
 if __name__ == '__main__':
+    # main script
     if "data" not in os.listdir():
         save = open("data", 'w')
         save.write('intro=no')
@@ -1167,7 +1168,7 @@ if __name__ == '__main__':
     if GAME_DATA['intro'] == 'no':
         CURRENT_ROOM = room_Intro()
     else:
-        CURRENT_ROOM = room_Testing()
+        CURRENT_ROOM = room_Testing()  # menu will be added soon
     CURRENT_ROOM.set()
 
     while RUNNING:
@@ -1188,6 +1189,7 @@ if __name__ == '__main__':
 
         pygame.display.flip()
         CLOCK.tick(FPS)
+    # working saving system
     save = open("data", 'w')
     save.write('\n'.join([f'{i}={GAME_DATA[i]}' for i in GAME_DATA.keys()]))
     save.close()
