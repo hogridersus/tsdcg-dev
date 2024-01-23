@@ -200,8 +200,8 @@ class Hitbox(pygame.sprite.Sprite):
 class Object(pygame.sprite.Sprite):
     def __init__(
             self,
-            sprite,
             layer,
+            sprite=None,
             columns=1,
             rows=1,
             animation_speed=1.0,
@@ -216,7 +216,8 @@ class Object(pygame.sprite.Sprite):
         self.flipx = 0
         self.flipy = 0
         self.timer = 0
-        self.states = {}
+        self.states = dict()
+        self.states['effects'] = dict()
         self.cur_costume_id = None
         self.costume_timer = 0
         self.image = None
@@ -231,13 +232,22 @@ class Object(pygame.sprite.Sprite):
         self.x_scale = 1
         self.y_scale = 1
         self.rect = pygame.rect.Rect(self.x, self.y, 0, 0)
-        self.register_costume(
-            'default',
-            sprite,
-            columns,
-            rows,
-            animation_speed)
-        self.set_costume('default')
+        if sprite is not None:
+            self.register_costume(
+                'default',
+                sprite,
+                columns,
+                rows,
+                animation_speed)
+            self.set_costume('default')
+        else:
+            self.register_costume(
+                'empty',
+                pygame.surface.Surface((0, 0)),
+                1,
+                1,
+                animation_speed)
+            self.set_costume('empty')
 
     def register_costume(
             self,
@@ -358,6 +368,11 @@ class Object(pygame.sprite.Sprite):
                                        (self.x_scale * orig_size[0] * CAMERA.scale,
                                         self.y_scale * orig_size[1] * CAMERA.scale)),
                 self.flipx, self.flipy), self.rotation + CAMERA.rotation)
+            if 'color' in self.states['effects'].keys():
+                self.image.fill(self.states['effects']['color'], special_flags=pygame.BLEND_RGBA_MULT)
+            if 'alpha' in self.states['effects'].keys():
+                self.image.fill(pygame.color.Color(255, 255, 255, 255 - self.states['effects']['alpha']),
+                                special_flags=pygame.BLEND_RGBA_MULT)
         self.rect = pygame.rect.Rect(
             SCREEN.get_width() /
             2 +
@@ -456,11 +471,17 @@ class PrimeObject(Object):
         self.image = pygame.transform.flip(self.image, self.flipx, self.flipy)
 
     def render_costume(self):
-        orig_size = self.costume[0][self.cur_frame].get_size()
-        self.image = pygame.transform.rotate(pygame.transform.flip(
-            pygame.transform.scale(self.costume[0][self.cur_frame],
-                                   (self.x_scale * orig_size[0], self.y_scale * orig_size[1])),
-            self.flipx, self.flipy), self.rotation)
+        if self.rect.colliderect(pygame.rect.Rect(-50, -50, SCREEN.get_width() + 50, SCREEN.get_height() + 50)):
+            orig_size = self.costume[0][self.cur_frame].get_size()
+            self.image = pygame.transform.rotate(pygame.transform.flip(
+                pygame.transform.scale(self.costume[0][self.cur_frame],
+                                       (self.x_scale * orig_size[0], self.y_scale * orig_size[1])),
+                self.flipx, self.flipy), self.rotation)
+            if 'color' in self.states['effects'].keys():
+                self.image.fill(self.states['effects']['color'], special_flags=pygame.BLEND_RGBA_MULT)
+            if 'alpha' in self.states['effects'].keys():
+                self.image.fill(pygame.color.Color(255, 255, 255, 255 - self.states['effects']['alpha']),
+                                special_flags=pygame.BLEND_RGBA_MULT)
         self.rect = pygame.rect.Rect(
             SCREEN.get_width() /
             2 +
@@ -479,31 +500,178 @@ class PrimeObject(Object):
 class Block(Object):
     def __init__(
             self,
-            sprite,
             layer,
+            x=0,
+            y=0,
+            sprite=None,
             columns=1,
             rows=1,
             animation_speed=1.0,
-            x=0,
-            y=0,
             groups=()):
-        super().__init__(sprite, layer, columns, rows, animation_speed, groups)
+        super().__init__(layer, sprite, columns, rows, animation_speed, groups)
         self.set_position(x, y)
 
     def set_position(self, x, y):
         self.x, self.y = x * 30, y * 30 - self.image.get_height() / 2 + 16
 
 
-class Entity(Object):
+class TextGenerator(Object):
     def __init__(
             self,
-            sprite,
             layer,
+            x=0,
+            y=0,
+            size=14,
+            every=0,
+            sprite=None,
             columns=1,
             rows=1,
             animation_speed=1.0,
             groups=()):
-        super().__init__(sprite, layer, columns, rows, animation_speed, groups)
+        super().__init__(layer, sprite, columns, rows, animation_speed, groups)
+        self.set_position(x, y)
+        self.text_size = size
+        self.every = every
+        self.states['typing'] = dict()
+        self.states['letter'] = dict()
+        self.states['typing']['step'] = 'waiting'
+        self.states['typing']['every'] = 0
+        self.text = ''
+
+    def clear(self):
+        for i in self.states['typing']['created']:
+            i.kill()
+            del i
+        self.states['typing']['step'] = 'waiting'
+        self.x = self.states['typing']['x']
+        self.y = self.states['typing']['y']
+        self.text = ''
+
+    def register_font(
+            self,
+            sprite=None,
+            columns=1,
+            rows=1):
+        frames = []
+        rect = pygame.Rect(0, 0, sprite.get_width() // columns,
+                           sprite.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (rect.w * i, rect.h * j)
+                frames.append(sprite.subsurface(pygame.Rect(
+                    frame_location, rect.size)))
+
+        text_order = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz()[]_.,:;%!?~-+=1234567890'
+
+        for i in range(len(frames)):
+            self.costumes[text_order[i]] = ([frames[i]], 0)
+
+    def on_tick(self):
+        if self.text != '' and self.states['typing']['step'] == 'waiting':
+            if self.every == 0:
+                self.states['typing']['step'] = 'momental'
+            else:
+                self.states['typing']['step'] = 'going'
+            self.states['typing']['letter'] = 0
+            self.states['typing']['x'] = self.x
+            self.states['typing']['y'] = self.y
+            self.states['typing']['created'] = []
+            self.states['letter']['color'] = '#FFFFFF'
+            self.states['letter']['alpha'] = 0
+            self.states['typing']['wait'] = 0
+        if self.states['typing']['step'] == 'going' and self.states['typing']['every'] % self.every == 0:
+            if self.states['typing']['wait'] > 0:
+                self.states['typing']['wait'] -= 1
+                return
+            if self.text[self.states['typing']['letter']] == '<':
+                self.commands_finc()
+                return
+            self.states['typing']['created'].append(TextLetter(self,
+                                                               letter=self.text[self.states['typing']['letter']],
+                                                               x=self.x, y=self.y))
+            self.x += self.text_size
+            self.states['typing']['letter'] += 1
+            if self.states['typing']['letter'] >= len(self.text):
+                self.states['typing']['step'] = 'done'
+        if self.text != '' and self.states['typing']['step'] == 'momental':
+            while self.states['typing']['step'] != 'done':
+                if self.text[self.states['typing']['letter']] == '<':
+                    self.commands_finc()
+                    continue
+                self.states['typing']['created'].append(TextLetter(self,
+                                                                   letter=self.text[self.states['typing']['letter']],
+                                                                   x=self.x, y=self.y))
+                self.x += self.text_size
+                self.states['typing']['letter'] += 1
+                if self.states['typing']['letter'] >= len(self.text):
+                    self.states['typing']['step'] = 'done'
+        self.states['typing']['every'] += 1
+        if self.every > 0:
+            self.states['typing']['every'] %= self.every
+
+    def commands_finc(self):
+        self.states['typing']['letter'] += 1
+        command = ''
+        while self.text[self.states['typing']['letter']] != '>':
+            command += self.text[self.states['typing']['letter']]
+            self.states['typing']['letter'] += 1
+        command = command.split(':')
+        command_args = command[1].split(',') if len(command) > 1 else ''
+        command = command[0]
+        if command == 'col':
+            self.states['letter']['color'] = command_args[0]
+        if command == 'alp':
+            self.states['letter']['alpha'] = int(command_args[0])
+        if command == 'n':
+            self.x = self.states['typing']['x']
+            self.y += self.text_size
+        if command == 'x':
+            self.states['typing']['x'] = int(command_args[0])
+            self.x = self.states['typing']['x']
+        if command == 'y':
+            self.y = self.states['typing']['y'] = int(command_args[0])
+            self.y = self.states['typing']['y']
+        if command == 'wait':
+            self.states['typing']['wait'] = int(command_args[0])
+        if command == 'd':
+            for i in range(1, int(command_args[0]) + 1):
+                self.states['typing']['created'][-i].kill()
+                del self.states['typing']['created'][-i]
+            self.states['typing']['every'] += 1
+            if self.every > 0:
+                self.states['typing']['every'] %= self.every
+        self.states['typing']['letter'] += 1
+        if self.states['typing']['letter'] >= len(self.text):
+            self.states['typing']['step'] = 'done'
+
+
+class TextLetter(Object):
+    def __init__(
+            self,
+            parent,
+            letter='',
+            x=0,
+            y=0):
+        super().__init__(parent.layer_offset)
+        self.parent = parent
+        self.costumes = self.parent.costumes
+        self.set_position(x, y)
+        if letter != ' ':
+            self.set_costume(letter)
+        self.states['effects']['color'] = self.parent.states['letter']['color']
+        self.states['effects']['alpha'] = self.parent.states['letter']['alpha']
+
+
+class Entity(Object):
+    def __init__(
+            self,
+            layer,
+            sprite=None,
+            columns=1,
+            rows=1,
+            animation_speed=1.0,
+            groups=()):
+        super().__init__(layer, sprite, columns, rows, animation_speed, groups)
         self.speed = 4
         self.able_move = True
         self.facing = 'left'
@@ -517,13 +685,13 @@ class Entity(Object):
 class entity_Player(Entity):
     def __init__(
             self,
-            sprite,
             layer,
+            sprite=None,
             columns=1,
             rows=1,
             animation_speed=1.0,
             groups=()):
-        super().__init__(sprite, layer, columns, rows, animation_speed, groups)
+        super().__init__(layer, sprite, columns, rows, animation_speed, groups)
         self.base_hp = 100
         self.base_defense = 0
         self.register_costume('left', load_image('player_left.png', 2),
@@ -647,13 +815,13 @@ class entity_Player(Entity):
 class weapon_BirchTree(Object):
     def __init__(
             self,
-            sprite,
             layer,
+            sprite=None,
             columns=1,
             rows=1,
             animation_speed=1.0,
             groups=()):
-        super().__init__(sprite, layer, columns, rows, animation_speed, groups)
+        super().__init__(layer, sprite, columns, rows, animation_speed, groups)
         self.object_id = 'BirchTree'
         self.held = melee_held_gen(x_offset=0, y_offset=-124, rot_offset=90, flippable_x=True)
         self.attack = melee_attack_gen(x_offset=0, y_offset=-124, rot_offset=90,
@@ -699,7 +867,7 @@ class Room:
         pass
 
     def set(self):
-        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM, GAME_DATA
         global sprites_groups, all_sprites, shown_sprites
         CLOCK = pygame.time.Clock()
         FPS = 60
@@ -714,9 +882,11 @@ class Room:
 
 class room_Testing(Room):
     def on_set(self):
-        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM, GAME_DATA
         global sprites_groups, all_sprites, shown_sprites
         global cursor, ground, wall, entity, player
+
+        self.timer = 0
 
         CAMERA.set_mode('smooth_follow')
         CAMERA.speed = 0.2
@@ -725,26 +895,30 @@ class room_Testing(Room):
         sprites_groups['walls'] = pygame.sprite.Group()
         sprites_groups['entities'] = pygame.sprite.Group()
 
-        cursor = PrimeObject(load_image('crs_default.png', 2), 10000,
+        cursor = PrimeObject(10000,
+                             sprite=load_image('crs_default.png', 2),
                              columns=1,
                              rows=1,
                              animation_speed=0)
 
-        ground = [[Block(load_image('ground.png', 2), 1,
+        ground = [[Block(0,
+                         sprite=load_image('ground.png', 2),
                          columns=2,
                          rows=1,
                          animation_speed=0,
                          x=j - 12,
                          y=i - 4) for j in range(25)] for i in range(9)]
-        wall = [[Block(load_image('wall.png', 2), 48,
+        wall = [[Block(48,
+                       sprite=load_image('wall.png', 2),
+                       x=j - 12,
+                       y=i - 4,
                        columns=2,
                        rows=1,
                        animation_speed=0,
-                       x=j - 12,
-                       y=i - 4,
                        groups=(sprites_groups['walls'],))
                  for j in range(25) if i == 0 or j == 0 or i == 8 or j == 24] for i in range(9)]
-        player = entity_Player(load_image('default_object.png', 2), 48,
+        player = entity_Player(48,
+                               sprite=load_image('default_object.png', 2),
                                columns=1,
                                rows=1,
                                animation_speed=0)
@@ -753,12 +927,13 @@ class room_Testing(Room):
             i.register_hitbox(Hitbox(i, 'movement', 'rect', size=(32, 32)))
         player.register_hitbox(Hitbox(player, 'movement', 'rect', size=(28, 28), y_offset=4))
 
-        player.holding_weapon = weapon_BirchTree(load_image('wpn_tree.png', 2), 256,
+        player.holding_weapon = weapon_BirchTree(256, sprite=load_image('wpn_tree.png', 2),
                                                  columns=1,
                                                  rows=1,
                                                  animation_speed=0)
 
-        entity = [Entity(load_image('entity_test.png', 2), 48,
+        entity = [Entity(48,
+                         sprite=load_image('entity_test.png', 2),
                          columns=1,
                          rows=1,
                          animation_speed=0,
@@ -768,7 +943,7 @@ class room_Testing(Room):
         all_sprites.update()
 
     def room_function(self):
-        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM, GAME_DATA
         global sprites_groups, all_sprites, shown_sprites
         global cursor, ground, wall, entity, player
 
@@ -782,24 +957,226 @@ class room_Testing(Room):
                 if event.button == 1:
                     player.holding_weapon.left_click_interact()
                 elif event.button == 2:
-                    entity.insert(0, Entity(load_image('entity_test.png', 2), 48,
-                                            columns=1,
-                                            rows=1,
-                                            animation_speed=0,
-                                            groups=(sprites_groups['entities'],)))
+                    entity = [Entity(48,
+                                     sprite=load_image('entity_test.png', 2),
+                                     columns=1,
+                                     rows=1,
+                                     animation_speed=0,
+                                     groups=(sprites_groups['entities'],))]
                     entity[0].register_hitbox(Hitbox(entity[0], 'damage', 'image'))
                     entity[0].x = 360 * (random.random() - 0.5)
                 elif event.button == 3:
-                    all_sprites = pygame.sprite.Group()
-                    shown_sprites = pygame.sprite.LayeredUpdates()
+                    text = TextGenerator(5000, x=0, y=0, every=1)
+                    text.register_font(sprite=load_image('fonts/normal_font.png', 2), columns=26, rows=3)
+                    text.text = 'hello guys'
 
+        CAMERA.move((-player.x, -player.y))
+
+        self.timer += 1
+
+
+class room_Intro(Room):
+    def on_set(self):
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM, GAME_DATA
+        global sprites_groups, all_sprites, shown_sprites
+        global text
+
+        self.timer = 0
+
+        CAMERA.set_mode('smooth_follow')
+        CAMERA.speed = 0.2
+        CAMERA.scale = 1
+
+        text = TextGenerator(5000, x=0, y=0, every=fps_sync_int(1))
+        text.register_font(sprite=load_image('fonts/normal_font.png', 2), columns=26, rows=3)
+
+        all_sprites.update()
+
+    def room_function(self):
+        global CAMERA, CLOCK, FPS, SCREEN, RUNNING, CURRENT_ROOM, GAME_DATA
+        global sprites_groups, all_sprites, shown_sprites
+        global text
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                RUNNING = False
+
+        if self.timer == fps_sync_int(30):
+            line = 'welcome to...'
+            say = f'<x:{len(line) * -7}>{line}'
+            text.text = say
+
+        if self.timer == fps_sync_int(120):
+            text.clear()
+            line = 'totally serious dungeon cleaning game'
+            say = f'<x:{len(line) * -7}>{line}'
+            text.text = say
+
+        if self.timer == fps_sync_int(210):
+            text.clear()
+            lines = [
+                'but first of all...<wait:30>',
+                'you must read this funny unskippable thing'
+            ]
+            say = ''
+            for i in lines:
+                visible_len = 0
+                record = True
+                for j in i:
+                    if j == '<':
+                        record = False
+                    elif j == '>':
+                        record = True
+                    if record:
+                        visible_len += 1
+                say += f'<x:{visible_len * -7}>{i}<n>'
+            text.text = say
+
+        if self.timer == fps_sync_int(390):
+            text.clear()
+            lines = [
+                'good luck<wait:30>',
+                'my player'
+            ]
+            say = ''
+            for i in lines:
+                visible_len = 0
+                record = True
+                for j in i:
+                    if j == '<':
+                        record = False
+                    if record:
+                        visible_len += 1
+                    elif j == '>':
+                        record = True
+                say += f'<x:{visible_len * -7}>{i}<n>'
+            text.text = say
+
+        if self.timer == fps_sync_int(480):
+            text.every = 0
+            text.clear()
+            text.y = 380
+            lines = [
+                'rule 1. no genshin impact',
+                'rule 2. no friday night funkin',
+                'rule 3. no vtubers',
+                'rule 4. no madness combat',
+                'rule 5. no dream smp',
+                'rule 6. no nsfw please my mom checks the internet',
+                'rule 7. no touhou',
+                'rule 8. no scp',
+                'rule 9. no neco-arc',
+                'rule 10. no binding of isaac',
+                'rule 11. no league of legends',
+                'rule 12. no osu',
+                'rule 13. no undertale',
+                'rule 14. no deltarune',
+                'rule 15. no furrys',
+                'rule 16. no valorant',
+                'rule 17. no jujutsu kaisen',
+                'rule 18. no gumball',
+                'rule 19. no my hero academia',
+                'rule 20. no roblox',
+                'rule 21. no team fortress 2',
+                'rule 22. no counter strike 1.6',
+                'rule 23. no jojo references',
+                'rule 24. no squid games',
+                'rule 25. no jokes',
+                'rule 26. no funny',
+                'rule 27. no dota',
+                'rule 28. no overwatch',
+                'rule 29. no minecraft',
+                'rule 30. no brawl stars',
+                'rule 31. no clash royale',
+                'rule 32. no clash of clans',
+                'rule 33. no king of thieves',
+                'rule 34. ignore rule 6'
+            ]
+            say = ''
+            for i in lines:
+                visible_len = 0
+                record = True
+                for j in i:
+                    if j == '<':
+                        record = False
+                    if record:
+                        visible_len += 1
+                    elif j == '>':
+                        record = True
+                say += f'<x:{visible_len * -7}>{i}<n><n>'
+            text.text = say
+
+        if fps_sync_int(480) < self.timer < fps_sync_int(2130):
+            CAMERA.speed = 1
+            CAMERA.y_target -= fps_sync_int(1, reversed=True)
+
+        if self.timer == fps_sync_int(2130):
+            CAMERA.y_target = 0
+            text.every = fps_sync_int(1)
+            text.clear()
+            text.y = 0
+            lines = [
+                'good job<wait:30>',
+                '<col:#00FF00>now i allow you to pass'
+            ]
+            say = ''
+            for i in lines:
+                visible_len = 0
+                record = True
+                for j in i:
+                    if j == '<':
+                        record = False
+                    if record:
+                        visible_len += 1
+                    elif j == '>':
+                        record = True
+                say += f'<x:{visible_len * -7}>{i}<n>'
+            text.text = say
+
+        if self.timer == fps_sync_int(2320):
+            GAME_DATA['intro'] = 'yes'
+            CURRENT_ROOM = room_Testing()
+            CURRENT_ROOM.set()
+
+        self.timer += 1
+
+
+if __name__ == '__main__':
+    if "data" not in os.listdir():
+        save = open("data", 'w')
+        save.write('intro=no')
+        save.close()
+    save = open("data", 'r')
+    GAME_DATA = dict()
+    for i in save.read().split('\n'):
+        GAME_DATA[i.split('=')[0]] = i.split('=')[1]
+    save.close()
+
+    pygame.init()
+    pygame.mouse.set_visible(False)
+    SCREEN = pygame.display.set_mode((800, 600))
+    RUNNING = True
+    CAMERA = Camera()
+    CLOCK = pygame.time.Clock()
+    FPS = 60
+
+    all_sprites = pygame.sprite.Group()
+    shown_sprites = pygame.sprite.LayeredUpdates()
+    sprites_groups = dict()
+
+    if GAME_DATA['intro'] == 'no':
+        CURRENT_ROOM = room_Intro()
+    else:
+        CURRENT_ROOM = room_Testing()
+    CURRENT_ROOM.set()
+
+    while RUNNING:
+        CURRENT_ROOM.room_function()
         for i in all_sprites:
             if hasattr(i, 'on_tick'):
                 i.on_tick()
 
         SCREEN.fill((0, 0, 0))
-
-        CAMERA.move((-player.x, -player.y))
 
         CAMERA.update()
         all_sprites.update()
@@ -811,20 +1188,7 @@ class room_Testing(Room):
 
         pygame.display.flip()
         CLOCK.tick(FPS)
-
-
-if __name__ == '__main__':
-    pygame.init()
-    pygame.mouse.set_visible(False)
-    SCREEN = pygame.display.set_mode((800, 600))
-    RUNNING = True
-    CAMERA = Camera()
-    CLOCK = pygame.time.Clock()
-    FPS = 60
-    CURRENT_ROOM = room_Testing()
-
-    CURRENT_ROOM.set()
-
-    while RUNNING:
-        CURRENT_ROOM.room_function()
+    save = open("data", 'w')
+    save.write('\n'.join([f'{i}={GAME_DATA[i]}' for i in GAME_DATA.keys()]))
+    save.close()
     pygame.quit()
