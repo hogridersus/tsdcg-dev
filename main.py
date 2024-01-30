@@ -1143,11 +1143,11 @@ class room_Intro(Room):
 
 if __name__ == '__main__':
     # main script
-    if "data" not in os.listdir():
-        save = open("data", 'w')
+    if "data.txt" not in os.listdir():
+        save = open("data.txt", 'w')
         save.write('intro=no')
         save.close()
-    save = open("data", 'r')
+    save = open("data.txt", 'r')
     GAME_DATA = dict()
     for i in save.read().split('\n'):
         GAME_DATA[i.split('=')[0]] = i.split('=')[1]
@@ -1190,7 +1190,7 @@ if __name__ == '__main__':
         pygame.display.flip()
         CLOCK.tick(FPS)
     # working saving system
-    save = open("data", 'w')
+    save = open("data.txt", 'w')
     save.write('\n'.join([f'{i}={GAME_DATA[i]}' for i in GAME_DATA.keys()]))
     save.close()
     pygame.quit()
